@@ -463,6 +463,7 @@ td.nd{color:var(--n400);font-style:italic}
 /* ---- módulo Toyo (clases prefijadas tf- para no colisionar con el brandbook) ---- */
 .prospect-mark img{width:104px;max-width:24vw}
 @media(max-width:620px){.prospect-mark img{width:88px}}
+.vid img.tf-poster{width:100%;display:block;opacity:.85}
 .tf-vidiag{margin-top:8px;font-size:11.5px;color:var(--n400);line-height:1.5;word-break:break-all}
 .tf-econ{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:12px}
 .tf-econ .e{border-radius:13px;padding:17px 16px;border:1px solid var(--n200);background:var(--neutral-0);display:flex;flex-direction:column;gap:7px}
@@ -1987,6 +1988,12 @@ td.nd{color:var(--n400);font-style:italic}
     ];
     var diag=[];
     function videoDown(){
+      var p=v.getAttribute("poster");
+      if(p){
+        var img=document.createElement("img");
+        img.className="tf-poster"; img.src=p; img.alt="Growth Stories · Café El Marino";
+        v.parentNode.insertBefore(img,v);
+      }
       v.style.display="none";
       if(fb) fb.style.display="block";
       if(DEBUG && fb){
@@ -2005,6 +2012,19 @@ td.nd{color:var(--n400);font-style:italic}
       v.load();
       var link=document.querySelector(".vidlink a");
       if(link) link.setAttribute("href",url);
+      // El archivo puede existir y aun así no ser un video legible: se valida que
+      // el navegador logre leer la duración antes de dejar el reproductor a la vista.
+      var ok=false;
+      v.addEventListener("loadedmetadata",function(){
+        if(isFinite(v.duration) && v.duration>0){ ok=true; }
+        else { diag.push(url+" → se sirve pero el navegador no puede leerlo"); videoDown(); }
+      });
+      setTimeout(function(){
+        if(!ok && v.readyState<1){
+          diag.push(url+" → sin metadatos después de 9 s");
+          videoDown();
+        }
+      },9000);
     }
     function probar(i){
       if(i>=CANDIDATOS.length){ videoDown(); return; }

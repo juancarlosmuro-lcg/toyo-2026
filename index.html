@@ -461,6 +461,9 @@ td.nd{color:var(--n400);font-style:italic}
 </style>
 <style>
 /* ---- módulo Toyo (clases prefijadas tf- para no colisionar con el brandbook) ---- */
+.prospect-mark img{width:104px;max-width:24vw}
+@media(max-width:620px){.prospect-mark img{width:88px}}
+.tf-vidiag{margin-top:8px;font-size:11.5px;color:var(--n400);line-height:1.5;word-break:break-all}
 .tf-econ{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:12px}
 .tf-econ .e{border-radius:13px;padding:17px 16px;border:1px solid var(--n200);background:var(--neutral-0);display:flex;flex-direction:column;gap:7px}
 .tf-econ .e .k{font-family:var(--font-numeric);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;font-weight:800;color:var(--green-600)}
@@ -1968,17 +1971,60 @@ td.nd{color:var(--n400);font-style:italic}
 
   var v=document.getElementById("gsVideo");
   if(v){
-    var failed=false;
+    var fb=document.getElementById("vidFallback");
+    var DEBUG=/[?&]debug=1/.test(location.search);
+    var CANDIDATOS=[
+      "./assets/el-marino-growth-stories.mp4",
+      "./el-marino-growth-stories.mp4",
+      "./assets/el-marino-growth-stories.MP4",
+      "./el-marino-growth-stories.MP4",
+      "./assets/el-marino.mp4",
+      "./el-marino.mp4",
+      "./assets/growth-stories-el-marino.mp4",
+      "./growth-stories-el-marino.mp4",
+      "./assets/video.mp4",
+      "./video.mp4"
+    ];
+    var diag=[];
     function videoDown(){
-      if(failed) return; failed=true;
       v.style.display="none";
-      var fb=document.getElementById("vidFallback"); if(fb) fb.style.display="block";
+      if(fb) fb.style.display="block";
+      if(DEBUG && fb){
+        var d=document.createElement("div");
+        d.className="tf-vidiag";
+        d.innerHTML="Diagnóstico de rutas:<br>"+diag.join("<br>");
+        fb.appendChild(d);
+      }
+      if(window.console) console.warn("Video no encontrado. Rutas probadas:",diag);
     }
-    v.addEventListener("error",videoDown,true);
-    v.addEventListener("stalled",function(){ if(v.networkState===v.NETWORK_NO_SOURCE) videoDown(); });
-    setTimeout(function(){
-      if(v.networkState===v.NETWORK_NO_SOURCE || (v.readyState===0 && v.error)) videoDown();
-    },6000);
+    function usar(url){
+      while(v.firstChild) v.removeChild(v.firstChild);
+      var s=document.createElement("source");
+      s.src=url; s.type="video/mp4";
+      v.appendChild(s);
+      v.load();
+      var link=document.querySelector(".vidlink a");
+      if(link) link.setAttribute("href",url);
+    }
+    function probar(i){
+      if(i>=CANDIDATOS.length){ videoDown(); return; }
+      var url=CANDIDATOS[i];
+      fetch(url,{method:"HEAD"}).then(function(r){
+        var len=parseInt(r.headers.get("content-length")||"0",10);
+        var tipo=r.headers.get("content-type")||"";
+        diag.push(url+" → "+r.status+" · "+(len||"sin tamaño")+" bytes · "+tipo);
+        if(r.ok && (len===0 || len>200000) && tipo.indexOf("text/html")!==0){ usar(url); }
+        else { probar(i+1); }
+      }).catch(function(e){
+        diag.push(url+" → sin respuesta");
+        probar(i+1);
+      });
+    }
+    v.addEventListener("error",function(){ if(v.networkState===v.NETWORK_NO_SOURCE) videoDown(); },true);
+    if(location.protocol==="http:"||location.protocol==="https:"){ probar(0); }
+    else {
+      setTimeout(function(){ if(v.networkState===v.NETWORK_NO_SOURCE) videoDown(); },5000);
+    }
   }
 
   fill();
